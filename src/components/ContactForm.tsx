@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Phone, Mail, MapPin } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 const ContactForm = () => {
   const [formData, setFormData] = useState({
@@ -27,22 +26,34 @@ const ContactForm = () => {
     setIsSubmitting(true);
     
     try {
-      // Submit form data to Supabase
-      const { error } = await supabase
-        .from('form_submissions')
-        .insert([{
+      // Format all form fields into the message
+      const formattedMessage = `
+Company: ${formData.company}
+Current Systems: ${formData.currentSystems || 'Not specified'}
+Biggest Challenges: ${formData.painPoints}
+Annual Revenue: ${formData.revenue || 'Not specified'}
+Timeline: ${formData.timeline || 'Not specified'}
+      `.trim();
+
+      const response = await fetch("https://www.outlfy.com/api/contact", {
+        method: "POST",
+        headers: {
+          "accept": "*/*",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          company: formData.company,
-          phone: formData.phone || null,
-          current_systems: formData.currentSystems || null,
-          pain_points: formData.painPoints,
-          revenue: formData.revenue || null,
-          timeline: formData.timeline || null
-        }]);
+          phone: formData.phone,
+          subject: `Audit Request from ${formData.company}`,
+          message: formattedMessage,
+          formType: "contact",
+          source: "/commerce"
+        }),
+      });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error("Failed to submit form");
       }
 
       toast({
